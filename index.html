@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>휘매쓰 연산 챌린지!</title>
+    <style>
+        body {
+            font-family: 'Nanum Gothic', sans-serif;
+            text-align: center;
+            background-color: #f0f8ff;
+            margin: 0;
+            padding: 0;
+        }
+        #game-container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+        }
+        #energy-bar {
+            width: 80%;
+            height: 20px;
+            background-color: #ddd;
+            margin: 20px auto;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        #energy {
+            width: 100%;
+            height: 100%;
+            background-color: #76c7c0;
+        }
+        .hidden {
+            display: none;
+        }
+        #question {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            padding: 0 20px;
+        }
+        #answer-input {
+            font-size: 1.2em;
+            padding: 10px;
+            width: 200px;
+        }
+        #submit-btn {
+            font-size: 1.2em;
+            padding: 10px 20px;
+            margin-top: 10px;
+        }
+        #score, #lives, #total-time {
+            font-size: 1em;
+            margin: 10px;
+        }
+        #popup {
+            position: fixed;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -30%);
+            background-color: #fff9c4;
+            padding: 20px;
+            border: 2px solid #ffeb3b;
+            border-radius: 10px;
+            display: none;
+            z-index: 1000;
+        }
+        #difficulty-selection button {
+            font-size: 1.2em;
+            margin: 10px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>휘매쓰 연산 챌린지!</h1>
+        <div id="difficulty-selection">
+            <p>난이도를 선택하세요:</p>
+            <button onclick="startGame('최상')">최상</button>
+            <button onclick="startGame('상')">상</button>
+            <button onclick="startGame('중')">중</button>
+            <button onclick="startGame('하')">하</button>
+        </div>
+        <div id="game" class="hidden">
+            <div id="energy-bar">
+                <div id="energy"></div>
+            </div>
+            <div id="question"></div>
+            <input type="number" id="answer-input" placeholder="답을 입력하세요">
+            <button id="submit-btn" onclick="checkAnswer()">제출</button>
+            <div id="score">점수: 0</div>
+            <div id="lives">남은 기회: 3</div>
+            <div id="total-time">총 게임 시간: 0초</div>
+        </div>
+    </div>
+    <div id="popup"></div>
+    <script>
+        const problems = [
+            { question: '철수는 사과를 127개 가지고 있습니다. 영희는 사과를 389개 가지고 있습니다. 두 사람이 가진 사과는 모두 몇 개입니까?', answer: 127 + 389 },
+            { question: '민수는 연필을 248자루 가지고 있습니다. 지혜는 연필을 317자루 가지고 있습니다. 두 사람이 가진 연필은 모두 몇 자루입니까?', answer: 248 + 317 },
+            { question: '동수는 공을 115개 가지고 있습니다. 미나는 동수보다 237개 더 많이 가지고 있습니다. 두 사람이 가진 공은 모두 몇 개입니까?', answer: 115 + (115 + 237) },
+            { question: '지훈은 바나나를 152개 가지고 있습니다. 수지는 바나나를 263개 가지고 있습니다. 두 사람이 가진 바나나는 모두 몇 개입니까?', answer: 152 + 263 },
+            { question: '지민은 책을 332권 가지고 있습니다. 유나는 책을 148권 가지고 있습니다. 두 사람이 가진 책은 모두 몇 권입니까?', answer: 332 + 148 },
+            { question: '철수는 쿠키를 216개 가지고 있습니다. 영희는 철수보다 118개 더 많이 가지고 있습니다. 두 사람이 가진 쿠키는 모두 몇 개입니까?', answer: 216 + (216 + 118) },
+            { question: '민수는 과자를 305개 가지고 있습니다. 지혜는 과자를 142개 가지고 있습니다. 두 사람이 가진 과자는 모두 몇 개입니까?', answer: 305 + 142 },
+            { question: '동수는 귤을 187개 가지고 있습니다. 미나는 동수보다 69개 더 많이 가지고 있습니다. 두 사람이 가진 귤은 모두 몇 개입니까?', answer: 187 + (187 + 69) },
+            { question: '지훈은 초콜릿을 289개 가지고 있습니다. 수지는 초콜릿을 132개 가지고 있습니다. 두 사람이 가진 초콜릿은 모두 몇 개입니까?', answer: 289 + 132 },
+            { question: '지민은 지우개를 193개 가지고 있습니다. 유나는 지우개를 204개 가지고 있습니다. 두 사람이 가진 지우개는 모두 몇 개입니까?', answer: 193 + 204 },
+
+            // 여기서부터 추가된 문제들 (총 40개 추가)
+            { question: '철수는 포도를 345개 가지고 있습니다. 영희는 포도를 576개 가지고 있습니다. 두 사람이 가진 포도는 모두 몇 개입니까?', answer: 345+576 },
+            { question: '민수는 복숭아를 423개 가지고 있습니다. 지혜는 복숭아를 189개 가지고 있습니다. 두 사람이 가진 복숭아는 모두 몇 개입니까?', answer: 423+189 },
+            { question: '동수는 귤을 734개 가지고 있습니다. 미나는 동수보다 152개 더 많이 가지고 있습니다. 두 사람이 가진 귤은 모두 몇 개입니까?', answer: 734+(734+152) },
+            { question: '지훈은 배를 512개 가지고 있습니다. 수지는 배를 307개 가지고 있습니다. 두 사람이 가진 배는 모두 몇 개입니까?', answer: 512+307 },
+            { question: '지민은 수박을 627개 가지고 있습니다. 유나는 수박을 373개 가지고 있습니다. 두 사람이 가진 수박은 모두 몇 개입니까?', answer: 627+373 },
+            { question: '철수는 자두를 488개 가지고 있습니다. 영희는 철수보다 211개 더 많이 가지고 있습니다. 두 사람이 가진 자두는 모두 몇 개입니까?', answer: 488+(488+211) },
+            { question: '민수는 딸기를 591개 가지고 있습니다. 지혜는 딸기를 142개 가지고 있습니다. 두 사람이 가진 딸기는 모두 몇 개입니까?', answer: 591+142 },
+            { question: '동수는 감자를 384개 가지고 있습니다. 미나는 동수보다 315개 더 많이 가지고 있습니다. 두 사람이 가진 감자는 모두 몇 개입니까?', answer: 384+(384+315) },
+            { question: '지훈은 당근을 449개 가지고 있습니다. 수지는 당근을 238개 가지고 있습니다. 두 사람이 가진 당근은 모두 몇 개입니까?', answer: 449+238 },
+            { question: '지민은 호두를 902개 가지고 있습니다. 유나는 호두를 107개 가지고 있습니다. 두 사람이 가진 호두는 모두 몇 개입니까?', answer: 902+107 },
+
+            { question: '철수는 땅콩을 333개 가지고 있습니다. 영희는 철수보다 444개 더 많이 가지고 있습니다. 두 사람이 가진 땅콩은 모두 몇 개입니까?', answer: 333+(333+444) },
+            { question: '민수는 메론을 129개 가지고 있습니다. 지혜는 메론을 671개 가지고 있습니다. 두 사람이 가진 메론은 모두 몇 개입니까?', answer: 129+671 },
+            { question: '동수는 볼펜을 543개 가지고 있습니다. 미나는 동수보다 256개 더 많이 가지고 있습니다. 두 사람이 가진 볼펜은 모두 몇 개입니까?', answer: 543+(543+256) },
+            { question: '지훈은 자몽을 777개 가지고 있습니다. 수지는 자몽을 111개 가지고 있습니다. 두 사람이 가진 자몽은 모두 몇 개입니까?', answer: 777+111 },
+            { question: '지민은 옥수수를 388개 가지고 있습니다. 유나는 옥수수를 599개 가지고 있습니다. 두 사람이 가진 옥수수는 모두 몇 개입니까?', answer: 388+599 },
+            { question: '철수는 토마토를 222개 가지고 있습니다. 영희는 철수보다 333개 더 많이 가지고 있습니다. 두 사람이 가진 토마토는 모두 몇 개입니까?', answer: 222+(222+333) },
+            { question: '민수는 양파를 618개 가지고 있습니다. 지혜는 양파를 309개 가지고 있습니다. 두 사람이 가진 양파는 모두 몇 개입니까?', answer: 618+309 },
+            { question: '동수는 마늘을 456개 가지고 있습니다. 미나는 동수보다 234개 더 많이 가지고 있습니다. 두 사람이 가진 마늘은 모두 몇 개입니까?', answer: 456+(456+234) },
+            { question: '지훈은 배추를 714개 가지고 있습니다. 수지는 배추를 285개 가지고 있습니다. 두 사람이 가진 배추는 모두 몇 개입니까?', answer: 714+285 },
+            { question: '지민은 고구마를 657개 가지고 있습니다. 유나는 고구마를 321개 가지고 있습니다. 두 사람이 가진 고구마는 모두 몇 개입니까?', answer: 657+321 },
+
+            { question: '철수는 밤을 345개 가지고 있습니다. 영희는 철수보다 456개 더 많이 가지고 있습니다. 두 사람이 가진 밤은 모두 몇 개입니까?', answer: 345+(345+456) },
+            { question: '민수는 콩을 417개 가지고 있습니다. 지혜는 콩을 292개 가지고 있습니다. 두 사람이 가진 콩은 모두 몇 개입니까?', answer: 417+292 },
+            { question: '동수는 사탕을 369개 가지고 있습니다. 미나는 동수보다 411개 더 많이 가지고 있습니다. 두 사람이 가진 사탕은 모두 몇 개입니까?', answer: 369+(369+411) },
+            { question: '지훈은 초를 159개 가지고 있습니다. 수지는 초를 842개 가지고 있습니다. 두 사람이 가진 초는 모두 몇 개입니까?', answer: 159+842 },
+            { question: '지민은 크레파스를 478개 가지고 있습니다. 유나는 크레파스를 523개 가지고 있습니다. 두 사람이 가진 크레파스는 모두 몇 개입니까?', answer: 478+523 },
+            { question: '철수는 모자를 369개 가지고 있습니다. 영희는 철수보다 147개 더 많이 가지고 있습니다. 두 사람이 가진 모자는 모두 몇 개입니까?', answer: 369+(369+147) },
+            { question: '민수는 장갑을 258개 가지고 있습니다. 지혜는 장갑을 741개 가지고 있습니다. 두 사람이 가진 장갑은 모두 몇 개입니까?', answer: 258+741 },
+            { question: '동수는 우유를 456개 가지고 있습니다. 미나는 동수보다 123개 더 많이 가지고 있습니다. 두 사람이 가진 우유는 모두 몇 개입니까?', answer: 456+(456+123) },
+            { question: '지훈은 치즈를 687개 가지고 있습니다. 수지는 치즈를 312개 가지고 있습니다. 두 사람이 가진 치즈는 모두 몇 개입니까?', answer: 687+312 },
+            { question: '지민은 빵을 414개 가지고 있습니다. 유나는 빵을 579개 가지고 있습니다. 두 사람이 가진 빵은 모두 몇 개입니까?', answer: 414+579 },
+
+            { question: '철수는 달걀을 753개 가지고 있습니다. 영희는 철수보다 246개 더 많이 가지고 있습니다. 두 사람이 가진 달걀은 모두 몇 개입니까?', answer: 753+(753+246) },
+            { question: '민수는 만두를 324개 가지고 있습니다. 지혜는 만두를 678개 가지고 있습니다. 두 사람이 가진 만두는 모두 몇 개입니까?', answer: 324+678 },
+            { question: '동수는 떡을 582개 가지고 있습니다. 미나는 동수보다 159개 더 많이 가지고 있습니다. 두 사람이 가진 떡은 모두 몇 개입니까?', answer: 582+(582+159) },
+            { question: '지훈은 과일을 197개 가지고 있습니다. 수지는 과일을 802개 가지고 있습니다. 두 사람이 가진 과일은 모두 몇 개입니까?', answer: 197+802 },
+            { question: '지민은 나무를 631개 가지고 있습니다. 유나는 나무를 286개 가지고 있습니다. 두 사람이 가진 나무는 모두 몇 개입니까?', answer: 631+286 },
+            { question: '철수는 도넛을 427개 가지고 있습니다. 영희는 철수보다 319개 더 많이 가지고 있습니다. 두 사람이 가진 도넛은 모두 몇 개입니까?', answer: 427+(427+319) },
+            { question: '민수는 초콜릿을 528개 가지고 있습니다. 지혜는 초콜릿을 471개 가지고 있습니다. 두 사람이 가진 초콜릿은 모두 몇 개입니까?', answer: 528+471 },
+            { question: '동수는 펜을 648개 가지고 있습니다. 미나는 동수보다 135개 더 많이 가지고 있습니다. 두 사람이 가진 펜은 모두 몇 개입니까?', answer: 648+(648+135) },
+            { question: '지훈은 수건을 286개 가지고 있습니다. 수지는 수건을 713개 가지고 있습니다. 두 사람이 가진 수건은 모두 몇 개입니까?', answer: 286+713 },
+            { question: '지민은 우산을 345개 가지고 있습니다. 유나는 우산을 654개 가지고 있습니다. 두 사람이 가진 우산은 모두 몇 개입니까?', answer: 345+654 }
+        ];
+
+        let gameTime = 0;
+        let energyInterval;
+        let totalTimeInterval;
+        let energyWidth;
+        let energyDecreaseRate;
+        let currentProblem;
+        let score = 0;
+        let lives = 3;
+        let totalTime = 0;
+        let difficulty;
+        let pointsPerQuestion;
+        let timeLimit;
+        let problemSequence = [];
+        let initialTimeLimit;
+
+        function startGame(selectedDifficulty) {
+            difficulty = selectedDifficulty;
+            document.getElementById('difficulty-selection').classList.add('hidden');
+            document.getElementById('game').classList.remove('hidden');
+            if (difficulty === '최상') {
+                timeLimit = 20;
+                pointsPerQuestion = 20;
+            } else if (difficulty === '상') {
+                timeLimit = 30;
+                pointsPerQuestion = 15;
+            } else if (difficulty === '중') {
+                timeLimit = 40;
+                pointsPerQuestion = 13;
+            } else {
+                timeLimit = Infinity;
+                pointsPerQuestion = 10;
+            }
+            initialTimeLimit = timeLimit;
+            energyDecreaseRate = 100 / timeLimit;
+            totalTimeInterval = setInterval(() => {
+                totalTime++;
+                document.getElementById('total-time').innerText = `총 게임 시간: ${totalTime}초`;
+            }, 1000);
+            problemSequence = [...problems];
+            shuffleArray(problemSequence);
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            if (lives <= 0) {
+                endGame();
+                return;
+            }
+            document.getElementById('answer-input').value = '';
+            if (energyInterval) clearInterval(energyInterval);
+            energyWidth = 100;
+            document.getElementById('energy').style.width = '100%';
+            if (difficulty !== '하') {
+                timeLimit = initialTimeLimit * Math.pow(0.99, score / pointsPerQuestion);
+                energyDecreaseRate = 100 / timeLimit;
+                energyInterval = setInterval(() => {
+                    energyWidth -= energyDecreaseRate * 0.1;
+                    document.getElementById('energy').style.width = energyWidth + '%';
+                    if (energyWidth <= 0) {
+                        clearInterval(energyInterval);
+                        lives--;
+                        document.getElementById('lives').innerText = `남은 기회: ${lives}`;
+                        showAnswer(false);
+                        if (lives > 0) {
+                            nextQuestion();
+                        } else {
+                            endGame();
+                        }
+                    }
+                }, 100);
+            }
+            if (problemSequence.length === 0) {
+                problemSequence = [...problems];
+                shuffleArray(problemSequence);
+            }
+            currentProblem = problemSequence.shift();
+            document.getElementById('question').innerText = currentProblem.question;
+        }
+
+        function checkAnswer() {
+            const userAnswer = document.getElementById('answer-input').value.trim();
+            const correctAnswer = currentProblem.answer;
+            if (parseInt(userAnswer) === correctAnswer) {
+                score += pointsPerQuestion;
+                document.getElementById('score').innerText = `점수: ${score}`;
+                showPopup();
+                nextQuestion();
+            } else {
+                lives--;
+                document.getElementById('lives').innerText = `남은 기회: ${lives}`;
+                showAnswer(true);
+                if (lives > 0) {
+                    nextQuestion();
+                } else {
+                    endGame();
+                }
+            }
+        }
+
+        function showAnswer(isWrong) {
+            const correctAnswer = currentProblem.answer;
+            if (isWrong) {
+                alert(`틀렸습니다! 정답은 ${correctAnswer}입니다.`);
+            } else {
+                alert(`시간 초과! 정답은 ${correctAnswer}입니다.`);
+            }
+        }
+
+        function endGame() {
+            clearInterval(totalTimeInterval);
+            alert(`게임 종료! 최종 점수: ${score}`);
+            location.reload();
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function showPopup() {
+            let randomNumber = Math.random();
+            let popupText = '';
+            if (randomNumber < 0.0001) {
+                popupText = '축하합니다! 5000원 상품권에 당첨되셨습니다!';
+            } else if (randomNumber < 0.001) {
+                popupText = '축하합니다! 3000원 상품권에 당첨되셨습니다!';
+            } else if (randomNumber < 0.002) {
+                popupText = '축하합니다! 1회 면제권을 획득하셨습니다!';
+                lives++;
+                document.getElementById('lives').innerText = `남은 기회: ${lives}`;
+            }
+            if (popupText) {
+                const popup = document.getElementById('popup');
+                popup.innerText = popupText;
+                popup.style.display = 'block';
+                setTimeout(() => {
+                    popup.style.display = 'none';
+                }, 3000);
+            }
+        }
+    </script>
+</body>
+</html>
